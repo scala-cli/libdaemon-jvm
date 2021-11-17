@@ -1,0 +1,79 @@
+name: CI
+on:
+  push:
+    branches:
+    - master
+    tags:
+    - "v*"
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ${{ matrix.OS }}
+    strategy:
+      fail-fast: false
+      matrix:
+        OS: ["ubuntu-latest", "windows-latest", "macos-latest"]
+        SCALA_VERSION: ["3.1.0"]
+        include:
+          - OS: "ubuntu-latest"
+            SCALA_VERSION: "2.12.15"
+          - OS: "ubuntu-latest"
+            SCALA_VERSION: "2.13.7"
+    steps:
+    - uses: actions/checkout@v2
+      with:
+        fetch-depth: 0
+        submodules: true
+    - uses: coursier/cache-action@v6.3
+    - uses: coursier/setup-action@v1.2.0-M1
+      with:
+        jvm: temurin:17
+    - name: Test
+      run: ./mill "__[$SCALA_VERSION].compile" && ./mill "__[$SCALA_VERSION].test"
+      if: runner.os != 'Windows'
+      env:
+        SCALA_VERSION: ${{ matrix.SCALA_VERSION }}
+    - name: Test
+      run: ./mill.bat "__[$SCALA_VERSION].compile" && ./mill.bat "__[$SCALA_VERSION].test"
+      shell: bash
+      if: runner.os == 'Windows'
+      env:
+        SCALA_VERSION: ${{ matrix.SCALA_VERSION }}
+
+  format:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+      with:
+        fetch-depth: 0
+        submodules: true
+    - uses: coursier/cache-action@v6.3
+    - uses: coursier/setup-action@v1.2.0-M1
+      with:
+        jvm: 8
+        apps: scalafmt:3.1.1
+    - run: scalafmt --check
+
+  publish:
+    needs: [test, format]
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+      with:
+        fetch-depth: 0
+        submodules: true
+    - uses: coursier/cache-action@v6.3
+    - uses: coursier/setup-action@v1.2.0-M1
+      with:
+        jvm: temurin:17
+    - run: .github/scripts/gpg-setup.sh
+      env:
+        PGP_SECRET: ${{ secrets.PGP_SECRET }}
+    - name: Release
+      run: ./mill -i publishSonatype __.publishArtifacts
+      env:
+        PGP_PASSWORD: ${{ secrets.PGP_PASSPHRASE }}
+        SONATYPE_PASSWORD: ${{ secrets.SONATYPE_PASSWORD }}
+        SONATYPE_USERNAME: ${{ secrets.SONATYPE_USERNAME }}
