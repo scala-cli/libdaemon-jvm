@@ -1,6 +1,4 @@
-package libdaemonjvm
-
-import libdaemonjvm.internal.{Pid, Processes}
+package libdaemonjvm.internal
 
 trait LockProcess {
   def pid(): Int

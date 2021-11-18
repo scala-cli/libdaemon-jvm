@@ -5,6 +5,8 @@ import java.util.concurrent.atomic.AtomicInteger
 import java.nio.channels.ServerSocketChannel
 
 import libdaemonjvm._
+import libdaemonjvm.internal._
+import libdaemonjvm.server._
 import java.net.ServerSocket
 import scala.util.Properties
 import java.util.concurrent.CountDownLatch
