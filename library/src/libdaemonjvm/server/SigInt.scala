@@ -1,4 +1,4 @@
-package libdaemonjvm
+package libdaemonjvm.server
 
 import sun.misc.{Signal, SignalHandler}
 

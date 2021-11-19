@@ -2,20 +2,24 @@ package libdaemonjvm.tests
 
 import com.eed3si9n.expecty.Expecty.expect
 import libdaemonjvm._
-import libdaemonjvm.internal.SocketFile
+import libdaemonjvm.internal._
+import libdaemonjvm.server._
 
 import java.nio.file.Files
-import libdaemonjvm.internal.SocketHandler
+import libdaemonjvm.client.Connect
 
 class LockTests extends munit.FunSuite {
 
   test("simple") {
     TestUtil.withTestDir { dir =>
-      TestUtil.tryAcquire(dir) { (files, maybeServerChannel) =>
+      val files = TestUtil.lockFiles(dir)
+      TestUtil.tryAcquire(files) { maybeServerChannel =>
         expect(maybeServerChannel.isRight)
-        val canConnect = SocketFile.canConnect(files.socketPaths)
-        expect(canConnect.isRight)
+        val connectRes = Connect.tryConnect(files)
+        expect(connectRes.exists(_.isRight))
       }
+      val after = Connect.tryConnect(files)
+      expect(after.exists(_.isLeft)) // zombie found (our own process, not listening on the socket)
     }
   }
 

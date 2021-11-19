@@ -1,10 +1,11 @@
-package libdaemonjvm
+package libdaemonjvm.server
 
 import java.nio.channels.ServerSocketChannel
 import java.nio.charset.StandardCharsets
 import java.nio.file.{Files, Path}
 
-import libdaemonjvm.internal.{SocketFile, SocketHandler}
+import libdaemonjvm.LockFiles
+import libdaemonjvm.internal.{LockProcess, SocketFile, SocketHandler}
 import java.net.ServerSocket
 
 object Lock {

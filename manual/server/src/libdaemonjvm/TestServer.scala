@@ -6,6 +6,7 @@ import scala.concurrent.duration._
 import java.util.concurrent.atomic.AtomicInteger
 
 import libdaemonjvm.internal.SocketFile
+import libdaemonjvm.server.Lock
 import java.io.IOException
 
 object TestServer {

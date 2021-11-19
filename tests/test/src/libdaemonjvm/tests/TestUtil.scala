@@ -5,10 +5,14 @@ import java.util.concurrent.atomic.AtomicInteger
 import java.nio.channels.ServerSocketChannel
 
 import libdaemonjvm._
+import libdaemonjvm.internal._
+import libdaemonjvm.server._
 import java.net.ServerSocket
 import scala.util.Properties
 import java.util.concurrent.CountDownLatch
 import java.net.Socket
+import java.util.concurrent.atomic.AtomicBoolean
+import libdaemonjvm.internal.SocketFile
 
 object TestUtil {
   private lazy val testDirBase = {
@@ -61,12 +65,17 @@ object TestUtil {
     var maybeServerChannel: Either[LockError, Either[ServerSocket, ServerSocketChannel]] = null
     var acceptThreadOpt = Option.empty[Thread]
     val accepting       = new CountDownLatch(1)
+    val shouldStop      = new AtomicBoolean(false)
     try {
       maybeServerChannel = Lock.tryAcquire(files, proc)
       if (Properties.isWin)
         // Windows named pipes seem no to accept clients unless accept is being called on the server socket
         acceptThreadOpt =
-          maybeServerChannel.toOption.flatMap(_.left.toOption.map(acceptAndDiscard(_, accepting)))
+          maybeServerChannel.toOption.flatMap(_.left.toOption.map(acceptAndDiscard(
+            _,
+            accepting,
+            () => shouldStop.get()
+          )))
       for (t <- acceptThreadOpt) {
         t.start()
         accepting.await()
@@ -75,14 +84,19 @@ object TestUtil {
       f(maybeServerChannel)
     }
     finally {
+      shouldStop.set(true)
+      SocketFile.canConnect(files.socketPaths) // unblock the server thread last accept
       for (e <- Option(maybeServerChannel); channel <- e)
         channel.merge.close()
-      acceptThreadOpt.foreach(_.interrupt()) // not sure this has an effect... :|
     }
   }
 
   val acceptAndDiscardCount = new AtomicInteger
-  def acceptAndDiscard(s: ServerSocket, accepting: CountDownLatch): Thread =
+  def acceptAndDiscard(
+    s: ServerSocket,
+    accepting: CountDownLatch,
+    shouldStop: () => Boolean
+  ): Thread =
     new Thread(
       s"libdaemonjvm-tests-accept-and-discard-${acceptAndDiscardCount.incrementAndGet()}"
     ) {
@@ -99,7 +113,7 @@ object TestUtil {
       }
       override def run(): Unit = {
         accepting.countDown()
-        while (true) {
+        while (!shouldStop()) {
           val client = s.accept()
           // closing the client socket in the background, as this call seems to block a few seconds
           closeSocket(client)
