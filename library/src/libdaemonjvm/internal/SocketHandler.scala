@@ -12,6 +12,7 @@ import scala.util.Properties
 import org.scalasbt.ipcsocket.Win32NamedPipeSocket
 import org.scalasbt.ipcsocket.Win32NamedPipeServerSocket
 
+import libdaemonjvm.errors._
 import libdaemonjvm.SocketPaths
 
 object SocketHandler {
@@ -21,7 +22,7 @@ object SocketHandler {
         if Option(ex.getCause)
           .collect { case e: NativeErrorException => e }
           .exists(e => connectionRelatedCodes(e.returnCode)) =>
-      throw new SocketExceptionLike(ex)
+      throw new ConnectExceptionLike(ex)
     case ex: IOException if ex.getMessage.contains("error code 2") =>
       throw new SocketExceptionLike(ex)
     case ex: IOException if ex.getMessage.contains("Couldn't open pipe for") =>
