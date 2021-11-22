@@ -5,6 +5,7 @@ import java.nio.channels.SocketChannel
 import java.nio.file.Path
 import java.net.Socket
 
+import libdaemonjvm.errors._
 import libdaemonjvm.SocketPaths
 
 object SocketFile {

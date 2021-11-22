@@ -1,4 +1,4 @@
-package libdaemonjvm.internal
+package libdaemonjvm.errors
 
 import java.io.IOException
 
