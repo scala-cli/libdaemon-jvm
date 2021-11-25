@@ -63,6 +63,8 @@ object LockFiles {
     addPipePrefix: Boolean,
     checkPermissions: Boolean
   ): LockFiles = {
+    // FIXME Java 16 support on Windows also uses actual files on disk AFAIK.
+    // So we might need to check permissions there too.
     if (checkPermissions && !Properties.isWin) {
       val perms   = Files.getPosixFilePermissions(dir).asScala.toSet
       val invalid = perms.intersect(forbiddenPermissions)
