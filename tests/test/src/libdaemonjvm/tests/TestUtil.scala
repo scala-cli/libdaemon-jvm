@@ -32,11 +32,14 @@ object TestUtil {
     dir
   }
 
-  def lockFiles(dir: os.Path): LockFiles =
+  def lockFiles(dir: os.Path): LockFiles = {
+    os.makeDir.all(dir)
+    os.perms.set(dir, "rwx------")
     LockFiles.under(
       dir.toNIO,
       "libdaemonjvm-tests-" + dir.segments.toVector.drop(dir.segmentCount - 2).mkString("-")
     )
+  }
 
   private val count = new AtomicInteger
   def withTestDir[T](f: os.Path => T): T = {
