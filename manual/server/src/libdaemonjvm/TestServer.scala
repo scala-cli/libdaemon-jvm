@@ -1,19 +1,34 @@
 package libdaemonjvm
 
-import java.nio.file.Paths
+import java.io.IOException
+import java.nio.file.{Files, Paths}
+import java.nio.file.attribute.PosixFilePermission
+import java.util.concurrent.atomic.AtomicInteger
 
 import scala.concurrent.duration._
-import java.util.concurrent.atomic.AtomicInteger
+import scala.jdk.CollectionConverters._
+import scala.util.Properties
 
 import libdaemonjvm.internal.SocketFile
 import libdaemonjvm.server.Lock
-import java.io.IOException
 
 object TestServer {
   val delay          = 2.seconds
   def runTestClients = false
   def main(args: Array[String]): Unit = {
-    val files = LockFiles.under(Paths.get("data-dir"), "libdaemonjvm\\test-server-client\\pipe")
+    val path = Paths.get("data-dir")
+    if (!Properties.isWin) {
+      Files.createDirectories(path)
+      Files.setPosixFilePermissions(
+        path,
+        Set(
+          PosixFilePermission.OWNER_READ,
+          PosixFilePermission.OWNER_WRITE,
+          PosixFilePermission.OWNER_EXECUTE
+        ).asJava
+      )
+    }
+    val files = LockFiles.under(path, "libdaemonjvm\\test-server-client\\pipe")
     val incomingConn = Lock.tryAcquire(files) match {
       case Left(e)         => throw e
       case Right(Left(s))  => () => s.accept()

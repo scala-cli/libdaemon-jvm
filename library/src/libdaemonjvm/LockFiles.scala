@@ -1,11 +1,13 @@
 package libdaemonjvm
 
+import java.io.IOException
 import java.nio.channels.FileChannel
 import java.nio.file.{Files, Path}
-import java.nio.channels.FileLock
-import java.nio.channels.ClosedChannelException
-import java.io.IOException
+import java.nio.channels.{ClosedChannelException, FileLock}
+import java.nio.file.attribute.PosixFilePermission
 import java.nio.file.StandardOpenOption
+import scala.collection.JavaConverters._
+import scala.util.Properties
 
 final case class LockFiles(
   lockFile: Path,
@@ -38,9 +40,39 @@ final case class LockFiles(
 }
 
 object LockFiles {
+
+  private val forbiddenPermissions = {
+    import PosixFilePermission._
+    Set(
+      GROUP_READ,
+      GROUP_WRITE,
+      GROUP_EXECUTE,
+      OTHERS_READ,
+      OTHERS_WRITE,
+      OTHERS_EXECUTE
+    )
+  }
+
   def under(dir: Path, windowsPipeName: String): LockFiles =
     under(dir, windowsPipeName, addPipePrefix = true)
   def under(dir: Path, windowsPipeName: String, addPipePrefix: Boolean): LockFiles =
+    under(dir, windowsPipeName, addPipePrefix, checkPermissions = true)
+  def under(
+    dir: Path,
+    windowsPipeName: String,
+    addPipePrefix: Boolean,
+    checkPermissions: Boolean
+  ): LockFiles = {
+    // FIXME Java 16 support on Windows also uses actual files on disk AFAIK.
+    // So we might need to check permissions there too.
+    if (checkPermissions && !Properties.isWin) {
+      val perms   = Files.getPosixFilePermissions(dir).asScala.toSet
+      val invalid = perms.intersect(forbiddenPermissions)
+      if (invalid.nonEmpty)
+        throw new IllegalArgumentException(
+          s"$dir has invalid permissions ${invalid.map(_.name()).toVector.sorted.mkString(", ")}"
+        )
+    }
     LockFiles(
       lockFile = dir.resolve("lock"),
       pidFile = dir.resolve("pid"),
@@ -49,4 +81,5 @@ object LockFiles {
         if (addPipePrefix) "\\\\.\\pipe\\" + windowsPipeName else windowsPipeName
       )
     )
+  }
 }
