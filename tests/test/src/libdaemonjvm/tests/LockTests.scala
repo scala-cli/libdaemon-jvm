@@ -140,4 +140,23 @@ class LockTests extends munit.FunSuite {
     }
   }
 
+  test("locked") {
+    TestUtil.withTestDir { dir =>
+      val files = TestUtil.lockFiles(dir)
+      val e = files.withLock {
+        TestUtil.tryAcquire(files) { maybeChannel =>
+          maybeChannel match {
+            case Left(e: LockError.Locked) =>
+            case Left(otherError) =>
+              throw new Exception("Unexpected error type (expected Locked)", otherError)
+            case Right(channel) =>
+              sys.error("Opening new server channel should have failed")
+          }
+        }
+        Right(())
+      }
+      expect(e.isRight)
+    }
+  }
+
 }

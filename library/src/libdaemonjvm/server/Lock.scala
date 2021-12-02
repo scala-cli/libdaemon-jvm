@@ -10,18 +10,20 @@ import java.net.ServerSocket
 
 object Lock {
 
-  def tryAcquire[T](files: LockFiles)
-    : Either[LockError, Either[ServerSocket, ServerSocketChannel]] =
-    tryAcquire(files, LockProcess.default, SocketHandler.server(files.socketPaths))
   def tryAcquire[T](
-    files: LockFiles,
-    proc: LockProcess
-  ): Either[LockError, Either[ServerSocket, ServerSocketChannel]] =
-    tryAcquire(files, proc, SocketHandler.server(files.socketPaths))
+    files: LockFiles
+  )(
+    startListening: Either[ServerSocket, ServerSocketChannel] => T
+  ): Either[LockError, T] =
+    tryAcquire(files, LockProcess.default) {
+      val socket = SocketHandler.server(files.socketPaths)
+      startListening(socket)
+    }
 
   def tryAcquire[T](
     files: LockFiles,
-    proc: LockProcess,
+    proc: LockProcess
+  )(
     setup: => T
   ): Either[LockError, T] = {
 

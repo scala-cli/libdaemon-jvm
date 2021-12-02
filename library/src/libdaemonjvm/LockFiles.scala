@@ -8,27 +8,38 @@ import java.nio.file.attribute.PosixFilePermission
 import java.nio.file.StandardOpenOption
 import scala.collection.JavaConverters._
 import scala.util.Properties
+import libdaemonjvm.server.LockError
+import java.nio.channels.OverlappingFileLockException
 
 final case class LockFiles(
   lockFile: Path,
   pidFile: Path,
   socketPaths: SocketPaths
 ) {
-  def withLock[T](t: => T): T = {
+  def withLock[T](t: => Either[LockError, T]): Either[LockError, T] = {
     if (!Files.exists(lockFile)) {
       Files.createDirectories(lockFile.normalize.getParent)
       Files.write(lockFile, Array.emptyByteArray)
     }
-    var c: FileChannel = null
-    var l: FileLock    = null
+    var c: FileChannel                                    = null
+    var l: Either[OverlappingFileLockException, FileLock] = null
     try {
       c = FileChannel.open(lockFile, StandardOpenOption.WRITE)
-      l = c.lock()
-      t
+      l =
+        try Right(c.tryLock())
+        catch {
+          case ex: OverlappingFileLockException =>
+            Left(ex)
+        }
+      l match {
+        case Left(ex)    => Left(new LockError.Locked(lockFile, ex))
+        case Right(null) => Left(new LockError.Locked(lockFile))
+        case Right(_)    => t
+      }
     }
     finally {
       if (l != null)
-        try l.release()
+        try l.foreach(_.release())
         catch {
           case _: ClosedChannelException =>
           case _: IOException            =>

@@ -13,6 +13,7 @@ import java.util.concurrent.CountDownLatch
 import java.net.Socket
 import java.util.concurrent.atomic.AtomicBoolean
 import libdaemonjvm.internal.SocketFile
+import scala.util.control.NonFatal
 
 object TestUtil {
   private lazy val testDirBase = {
@@ -67,31 +68,41 @@ object TestUtil {
     files: LockFiles,
     proc: LockProcess
   )(f: Either[LockError, Either[ServerSocket, ServerSocketChannel]] => T): T = {
-    var maybeServerChannel: Either[LockError, Either[ServerSocket, ServerSocketChannel]] = null
-    var acceptThreadOpt = Option.empty[Thread]
-    val accepting       = new CountDownLatch(1)
-    val shouldStop      = new AtomicBoolean(false)
+    var serverChannel: Either[ServerSocket, ServerSocketChannel] = null
+    var acceptThreadOpt                                          = Option.empty[Thread]
+    val accepting                                                = new CountDownLatch(1)
+    val shouldStop                                               = new AtomicBoolean(false)
     try {
-      maybeServerChannel = Lock.tryAcquire(files, proc)
-      if (Properties.isWin)
-        // Windows named pipes seem no to accept clients unless accept is being called on the server socket
-        acceptThreadOpt =
-          maybeServerChannel.toOption.flatMap(_.left.toOption.map(acceptAndDiscard(
-            _,
-            accepting,
-            () => shouldStop.get()
-          )))
-      for (t <- acceptThreadOpt) {
-        t.start()
-        accepting.await()
-        Thread.sleep(1000L) // waiting so that the accept call below effectively awaits client... :|
+      val maybeServerChannel = Lock.tryAcquire(files, proc) {
+        serverChannel = SocketHandler.server(files.socketPaths)
+        if (Properties.isWin)
+          // Windows named pipes seem no to accept clients unless accept is being called on the server socket
+          acceptThreadOpt =
+            serverChannel.left.toOption.map(acceptAndDiscard(
+              _,
+              accepting,
+              () => shouldStop.get()
+            ))
+        for (t <- acceptThreadOpt) {
+          t.start()
+          accepting.await()
+          // waiting so that the accept call below effectively awaits client... :|
+          Thread.sleep(
+            1000L
+          )
+        }
+        serverChannel
       }
       f(maybeServerChannel)
     }
     finally {
       shouldStop.set(true)
-      SocketFile.canConnect(files.socketPaths) // unblock the server thread last accept
-      for (e <- Option(maybeServerChannel); channel <- e)
+      try SocketFile.canConnect(files.socketPaths) // unblock the server thread last accept
+      catch {
+        case NonFatal(e) =>
+          System.err.println(s"Ignoring $e while trying to unblock last accept")
+      }
+      for (channel <- Option(serverChannel))
         channel.merge.close()
     }
   }

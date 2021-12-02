@@ -1,6 +1,6 @@
 package libdaemonjvm
 
-import java.io.IOException
+import java.io.{Closeable, IOException}
 import java.nio.file.{Files, Paths}
 import java.nio.file.attribute.PosixFilePermission
 import java.util.concurrent.atomic.AtomicInteger
@@ -15,6 +15,26 @@ import libdaemonjvm.server.Lock
 object TestServer {
   val delay          = 2.seconds
   def runTestClients = false
+
+  def runServer(incomingConn: () => Closeable): Unit = {
+    val count = new AtomicInteger
+    while (true) {
+      println("Waiting for clients")
+      val c   = incomingConn()
+      val idx = count.incrementAndGet()
+      val runnable: Runnable = { () =>
+        println(s"New incoming connection $idx, closing it in $delay")
+        Thread.sleep(delay.toMillis)
+        println(s"Closing incoming connection $idx")
+        c.close()
+        println(s"Closed incoming connection $idx")
+      }
+      val t = new Thread(runnable)
+      t.start()
+      Thread.sleep(1000L) // meh, wait for server to be actually listening
+    }
+  }
+
   def main(args: Array[String]): Unit = {
     val path = Paths.get("data-dir")
     if (!Properties.isWin) {
@@ -29,10 +49,9 @@ object TestServer {
       )
     }
     val files = LockFiles.under(path, "libdaemonjvm\\test-server-client\\pipe")
-    val incomingConn = Lock.tryAcquire(files) match {
-      case Left(e)         => throw e
-      case Right(Left(s))  => () => s.accept()
-      case Right(Right(s)) => () => s.accept()
+    Lock.tryAcquire(files)(s => runServer(() => s.fold(_.accept(), _.accept()))) match {
+      case Left(e)   => throw e
+      case Right(()) =>
     }
 
     def clientRunnable(idx: Int): Runnable = { () =>
@@ -58,23 +77,6 @@ object TestServer {
       runClient(2)
       runClient(3)
       runClient(4)
-    }
-
-    val count = new AtomicInteger
-    while (true) {
-      println("Waiting for clients")
-      val c   = incomingConn()
-      val idx = count.incrementAndGet()
-      val runnable: Runnable = { () =>
-        println(s"New incoming connection $idx, closing it in $delay")
-        Thread.sleep(delay.toMillis)
-        println(s"Closing incoming connection $idx")
-        c.close()
-        println(s"Closed incoming connection $idx")
-      }
-      val t = new Thread(runnable)
-      t.setDaemon(true)
-      t.start()
     }
   }
 }
