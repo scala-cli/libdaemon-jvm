@@ -9,6 +9,7 @@ import org.graalvm.nativeimage.Platform;
 import org.graalvm.nativeimage.Platforms;
 import org.scalasbt.ipcsocket.Win32NamedPipeServerSocket;
 import org.scalasbt.ipcsocket.Win32NamedPipeSocket;
+import org.scalasbt.ipcsocket.Win32SecurityLevel;
 
 @TargetClass(className = "libdaemonjvm.internal.SocketMaker")
 @Platforms({Platform.WINDOWS.class})
@@ -19,6 +20,6 @@ final class SocketMakerWindowsSubst {
   }
   @Substitute
   public static ServerSocket server(String path) throws IOException {
-    return new Win32NamedPipeServerSocket(path, true);
+    return new Win32NamedPipeServerSocket(path, true, Win32SecurityLevel.LOGON_DACL);
   }
 }
