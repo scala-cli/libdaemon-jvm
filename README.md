@@ -47,9 +47,9 @@ can talk to each other.
 
 Add the following dependency to your build
 ```text
-io.github.alexarchambault.libdaemon::libdaemon:0.0.3
+io.github.alexarchambault.libdaemon::libdaemon:0.0.5
 ```
-The latest version is [![Maven Central](https://img.shields.io/maven-central/v/io.github.alexarchambault.libdaemon/libdaemon.svg)](https://maven-badges.herokuapp.com/maven-central/io.github.alexarchambault.libdaemon/libdaemon).
+The latest version is [![Maven Central](https://img.shields.io/maven-central/v/io.github.alexarchambault.libdaemon/libdaemon_3.svg)](https://maven-badges.herokuapp.com/maven-central/io.github.alexarchambault.libdaemon/libdaemon_3).
 
 From the server, call `Lock.tryAcquire`, and start accepting connections on the server socket in the thunk passed to it:
 ```scala
@@ -58,11 +58,16 @@ import java.nio.file._
 
 val daemonDirectory: Path = ??? // pass a directory under the user home dir, computed with directories-jvm for example
 val lockFiles = LockFiles.under(daemonDirectory, "my-app-name\\daemon") // second argument is the Windows named pipe path (that doesn't live in the file system)
-Lock.tryAcquire(lockFiles) { serverSocket: Either[ServerSocket, ServerSocketChannel] =>
+val res = Lock.tryAcquire(lockFiles) { serverSocket: Either[ServerSocket, ServerSocketChannel] =>
   // serverSocket is a Right(…) when Java >= 16 Unix domain socket support is used,
   // it's Left(…) when ipcsocket JNI support is used
 
   // you should start listening on serverSocket here, and as much as possible,
   // only exit this block when you are actually accepting incoming connections
+}
+res match {
+  case Left(ex: LockError.RecoverableError) => // something went wrong, you may want to retry after a small delay
+  case Left(ex: LockError.FatalError) => // something went wrong, retrying makes less sense here
+  case Right(_) => // daemon is listening on Unix domain socket or Windows named pipe
 }
 ```
