@@ -13,6 +13,7 @@ import java.util.concurrent.CountDownLatch
 import java.net.Socket
 import java.util.concurrent.atomic.AtomicBoolean
 import libdaemonjvm.internal.SocketFile
+import scala.util.control.NonFatal
 
 object TestUtil {
   private lazy val testDirBase = {
@@ -90,7 +91,11 @@ object TestUtil {
     }
     finally {
       shouldStop.set(true)
-      SocketFile.canConnect(files.socketPaths) // unblock the server thread last accept
+      try SocketFile.canConnect(files.socketPaths) // unblock the server thread last accept
+      catch {
+        case NonFatal(e) =>
+          System.err.println(s"Ignoring $e while trying to unblock last accept")
+      }
       for (e <- Option(maybeServerChannel); channel <- e)
         channel.merge.close()
     }
