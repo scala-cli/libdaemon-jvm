@@ -13,7 +13,7 @@ import java.nio.file.Paths
 
 import libdaemonjvm.SocketPaths
 
-object SocketHandler {
+object Java16SocketHandler extends SocketHandler {
   def usesWindowsPipe: Boolean = false
 
   def client(paths: SocketPaths): Either[Socket, SocketChannel] = {
