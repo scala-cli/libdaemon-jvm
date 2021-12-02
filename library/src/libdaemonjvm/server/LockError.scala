@@ -25,4 +25,6 @@ object LockError {
       extends FatalError(s"Cannot delete $file", cause)
   final class ZombieFound(val pid: Int, val connectionError: Throwable)
       extends RecoverableError(s"Cannot connect to process $pid", connectionError)
+  final class Locked(val file: Path, cause: Throwable = null)
+      extends RecoverableError(s"$file already locked", cause)
 }
