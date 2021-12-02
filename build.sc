@@ -34,7 +34,7 @@ def tmpDirBase =
 def libraryDeps = Seq(
   ivy"dev.dirs:directories:26",
   ivy"io.get-coursier.jniutils:windows-jni-utils:0.3.1",
-  ivy"com.github.alexarchambault.tmp.ipcsocket:ipcsocket:1.4.1-aa-2"
+  ivy"org.scala-sbt.ipcsocket:ipcsocket:1.4.0"
 )
 
 class Library(val crossScalaVersion: String) extends CrossScalaModule with LibDaemonPublish {
