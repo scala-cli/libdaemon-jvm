@@ -12,7 +12,9 @@ object LockProcess {
         sys.error("Cannot get PID")
       }
     def isRunning(pid: Int): Boolean =
-      Processes.isRunning(pid)
+      Option((new IsRunning).isRunning(pid)).map(b => (b: Boolean)).getOrElse {
+        Processes.isRunning(pid)
+      }
   }
 
   def default: LockProcess =
