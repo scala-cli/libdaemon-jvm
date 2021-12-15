@@ -32,8 +32,6 @@ def tmpDirBase =
     }
 
 def libraryDeps = Seq(
-  ivy"dev.dirs:directories:26",
-  ivy"io.get-coursier.jniutils:windows-jni-utils:0.3.1",
   ivy"org.scala-sbt.ipcsocket:ipcsocket:1.4.0"
 )
 
