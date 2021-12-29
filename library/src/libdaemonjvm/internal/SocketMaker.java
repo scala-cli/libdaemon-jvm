@@ -18,6 +18,6 @@ public final class SocketMaker {
   }
   public static ServerSocket server(String path) throws IOException {
     if (isWin) return new Win32NamedPipeServerSocket(path, true, Win32SecurityLevel.LOGON_DACL);
-    else return new UnixDomainServerSocket(path, true);
+    else return new CustomUnixDomainServerSocket(path);
   }
 }

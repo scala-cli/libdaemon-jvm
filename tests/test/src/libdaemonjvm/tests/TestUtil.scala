@@ -74,14 +74,13 @@ object TestUtil {
     try {
       val maybeServerChannel = Lock.tryAcquire(files, proc) {
         serverChannel = SocketHandler.server(files.socketPaths)
-        if (Properties.isWin)
-          // Windows named pipes seem no to accept clients unless accept is being called on the server socket
-          acceptThreadOpt =
-            serverChannel.left.toOption.map(acceptAndDiscard(
-              _,
-              accepting,
-              () => shouldStop.get()
-            ))
+        // Windows named pipes seem not to accept clients unless accept is being called on the server socket
+        acceptThreadOpt =
+          serverChannel.left.toOption.map(acceptAndDiscard(
+            _,
+            accepting,
+            () => shouldStop.get()
+          ))
         for (t <- acceptThreadOpt) {
           t.start()
           accepting.await()
@@ -101,8 +100,14 @@ object TestUtil {
         case NonFatal(e) =>
           System.err.println(s"Ignoring $e while trying to unblock last accept")
       }
-      for (channel <- Option(serverChannel))
-        channel.merge.close()
+      for (channel <- Option(serverChannel)) {
+        System.err.println(s"Closing $channel")
+        try channel.merge.close()
+        catch {
+          case NonFatal(e) =>
+            System.err.println(s"Ignoring $e while closing $channel")
+        }
+      }
     }
   }
 
