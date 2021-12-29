@@ -28,7 +28,7 @@ jobs:
     - uses: coursier/cache-action@v6.3
     - uses: coursier/setup-action@v1.2.0-M1
       with:
-        jvm: temurin:17
+        jvm: "temurin:17"
     - name: Test
       run: ./mill "__[$SCALA_VERSION].compile" && ./mill "__[$SCALA_VERSION].test"
       if: runner.os != 'Windows'
@@ -36,6 +36,35 @@ jobs:
         SCALA_VERSION: ${{ matrix.SCALA_VERSION }}
     - name: Test
       run: ./mill.bat "__[$SCALA_VERSION].compile" && ./mill.bat "__[$SCALA_VERSION].test"
+      shell: bash
+      if: runner.os == 'Windows'
+      env:
+        SCALA_VERSION: ${{ matrix.SCALA_VERSION }}
+
+  test-java-8:
+    name: "Test (Java 8)"
+    runs-on: ${{ matrix.OS }}
+    strategy:
+      fail-fast: false
+      matrix:
+        OS: ["ubuntu-latest", "windows-latest", "macos-latest"]
+        SCALA_VERSION: ["3.1.0"]
+    steps:
+    - uses: actions/checkout@v2
+      with:
+        fetch-depth: 0
+        submodules: true
+    - uses: coursier/cache-action@v6.3
+    - uses: coursier/setup-action@v1.2.0-M1
+      with:
+        jvm: 8
+    - name: Test
+      run: ./mill "jni-tests[$SCALA_VERSION].test"
+      if: runner.os != 'Windows'
+      env:
+        SCALA_VERSION: ${{ matrix.SCALA_VERSION }}
+    - name: Test
+      run: ./mill.bat "jni-tests[$SCALA_VERSION].test"
       shell: bash
       if: runner.os == 'Windows'
       env:
