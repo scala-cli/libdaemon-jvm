@@ -1,6 +1,8 @@
 package libdaemonjvm.internal
 
+import scala.util.Properties
+
 object DefaultSocketHandler {
   def default: SocketHandler =
-    JniSocketHandler
+    Java16SocketHandler
 }

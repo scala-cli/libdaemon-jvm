@@ -48,7 +48,7 @@ object TestServer {
         ).asJava
       )
     }
-    val files = LockFiles.under(path, "libdaemonjvm\\test-server-client\\pipe")
+    val files = LockFiles.under(path)
     Lock.tryAcquire(files)(s => runServer(() => s.fold(_.accept(), _.accept()))) match {
       case Left(e)   => throw e
       case Right(()) =>

@@ -38,10 +38,7 @@ object TestUtil {
       os.makeDir.all(dir)
       os.perms.set(dir, "rwx------")
     }
-    LockFiles.under(
-      dir.toNIO,
-      "libdaemonjvm-tests-" + dir.segments.toVector.drop(dir.segmentCount - 2).mkString("-")
-    )
+    LockFiles.under(dir.toNIO)
   }
 
   private val count = new AtomicInteger

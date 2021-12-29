@@ -1,9 +1,6 @@
 import $ivy.`com.lihaoyi::mill-contrib-bloop:$MILL_VERSION`
 import $ivy.`de.tototec::de.tobiasroeser.mill.vcs.version_mill0.9:0.1.1`
 
-import $file.jarmanifest
-import $file.zip
-
 import de.tobiasroeser.mill.vcs.version._
 import mill._
 import mill.scalalib._
@@ -15,11 +12,7 @@ def scala213      = "2.13.7"
 def scala212      = "2.12.15"
 def scalaVersions = Seq(scala3, scala213, scala212)
 
-object library     extends Cross[Library](scalaVersions: _*)
-object tests       extends Cross[Tests](scalaVersions: _*)
-object `jni-tests` extends Cross[JniTests](scalaVersions: _*)
-
-object library16 extends Cross[Library16](scalaVersions: _*)
+object library extends Cross[Library](scalaVersions: _*)
 
 def tmpDirBase =
   if (System.getenv("CI") == null)
@@ -31,60 +24,16 @@ def tmpDirBase =
       PathRef(os.home / ".test-data")
     }
 
-def libraryDeps = Seq(
-  ivy"org.scala-sbt.ipcsocket:ipcsocket:1.4.0"
-)
-
 class Library(val crossScalaVersion: String) extends CrossScalaModule with LibDaemonPublish {
   def artifactName = "libdaemon"
-  def ivyDeps      = super.ivyDeps() ++ libraryDeps
   def compileIvyDeps = super.compileIvyDeps() ++ Seq(
     ivy"org.graalvm.nativeimage:svm:21.2.0"
   )
   def javacOptions = super.javacOptions() ++ Seq(
     "--release",
-    "8"
+    "16"
   )
-
-  def baseJar = T {
-    super.jar()
-  }
-  def mrJar = T {
-    val newJar    = T.dest / "mr.jar"
-    val baseJar0  = baseJar()
-    val java16Jar = library16().jar()
-    val extraEntries = zip.entries(java16Jar.path)
-      .filter(_._1.getName.startsWith("libdaemonjvm"))
-      .map {
-        case (e, b) =>
-          val e0 = zip.newEntry("META-INF/versions/16/" + e.getName, e)
-          (e0, b)
-      }
-    assert(extraEntries.nonEmpty)
-    val (manifestEntries, baseEntries) =
-      zip.entries(baseJar0.path).partition(_._1.getName == "META-INF/MANIFEST.MF")
-    assert(manifestEntries.length == 1)
-    val (manifestEntry, manifestContent) = manifestEntries.head
-    val updatedManifestContent = jarmanifest.addAttributes(manifestContent)(
-      "Multi-Release" -> "true"
-    )
-    val allEntries = ((manifestEntry, updatedManifestContent) +: baseEntries) ++ extraEntries
-    zip.write(newJar, allEntries)
-    PathRef(newJar)
-  }
-  def jar = mrJar()
-}
-
-class Library16(val crossScalaVersion: String) extends CrossScalaModule {
-  def moduleDeps = Seq(
-    library()
-  )
-}
-
-abstract class TestsBase extends CrossScalaModule { self =>
-  def ivyDeps = super.ivyDeps() ++ libraryDeps
-  trait Tests extends super.Tests {
-    def unmanagedClasspath = super.unmanagedClasspath() ++ self.unmanagedClasspath()
+  object test extends Tests {
     def ivyDeps = super.ivyDeps() ++ Seq(
       ivy"org.scalameta::munit:0.7.29",
       ivy"com.eed3si9n.expecty::expecty:0.15.4",
@@ -94,24 +43,6 @@ abstract class TestsBase extends CrossScalaModule { self =>
     def forkEnv = super.forkEnv() ++ Seq(
       "TESTS_TMP_DIR" -> tmpDirBase().path.toString
     )
-  }
-}
-
-class Tests(val crossScalaVersion: String) extends TestsBase {
-  def unmanagedClasspath = super.unmanagedClasspath() ++ Seq(
-    library().jar()
-  )
-  object test extends Tests
-}
-
-class JniTests(val crossScalaVersion: String) extends TestsBase {
-  def unmanagedClasspath = super.unmanagedClasspath() ++ Seq(
-    library().baseJar()
-  )
-  object test extends Tests {
-    def sources = T.sources {
-      tests().test.sources()
-    }
   }
 }
 

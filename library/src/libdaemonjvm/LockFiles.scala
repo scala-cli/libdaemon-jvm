@@ -64,13 +64,12 @@ object LockFiles {
     )
   }
 
-  def under(dir: Path, windowsPipeName: String): LockFiles =
-    under(dir, windowsPipeName, addPipePrefix = true)
-  def under(dir: Path, windowsPipeName: String, addPipePrefix: Boolean): LockFiles =
-    under(dir, windowsPipeName, addPipePrefix, checkPermissions = true)
+  def under(dir: Path): LockFiles =
+    under(dir, addPipePrefix = true)
+  def under(dir: Path, addPipePrefix: Boolean): LockFiles =
+    under(dir, addPipePrefix, checkPermissions = true)
   def under(
     dir: Path,
-    windowsPipeName: String,
     addPipePrefix: Boolean,
     checkPermissions: Boolean
   ): LockFiles = {
@@ -87,10 +86,7 @@ object LockFiles {
     LockFiles(
       lockFile = dir.resolve("lock"),
       pidFile = dir.resolve("pid"),
-      socketPaths = SocketPaths(
-        dir.resolve("socket"),
-        if (addPipePrefix) "\\\\.\\pipe\\" + windowsPipeName else windowsPipeName
-      )
+      socketPaths = SocketPaths(dir.resolve("socket"))
     )
   }
 }
