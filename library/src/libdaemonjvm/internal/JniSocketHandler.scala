@@ -39,11 +39,13 @@ object JniSocketHandler extends SocketHandler {
   }
 
   private def actualPath(paths: SocketPaths): String =
-    if (usesWindowsPipe) paths.windowsPipeName
+    if (usesWindowsPipe(paths)) paths.windowsPipeName
     else paths.path.toString
 
-  def usesWindowsPipe: Boolean =
-    Properties.isWin
+  def supportsWindowsPipe: Boolean =
+    supported() && Properties.isWin
+  override def usesWindowsPipe(preferWindowsPipe: Boolean): Boolean =
+    true
 
   def client(paths: SocketPaths): Either[Socket, SocketChannel] = {
     val s =

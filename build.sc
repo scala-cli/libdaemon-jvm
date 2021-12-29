@@ -101,7 +101,11 @@ class Tests(val crossScalaVersion: String) extends TestsBase {
   def unmanagedClasspath = super.unmanagedClasspath() ++ Seq(
     library().jar()
   )
-  object test extends Tests
+  object test extends Tests {
+    def forkEnv = super.forkEnv() ++ Seq(
+      "LIBDAEMON_JAVA_16_TESTS" -> "true"
+    )
+  }
 }
 
 class JniTests(val crossScalaVersion: String) extends TestsBase {

@@ -34,10 +34,9 @@ object TestUtil {
   }
 
   def lockFiles(dir: os.Path): LockFiles = {
-    if (!Properties.isWin) {
-      os.makeDir.all(dir)
+    os.makeDir.all(dir)
+    if (!Properties.isWin)
       os.perms.set(dir, "rwx------")
-    }
     LockFiles.under(
       dir.toNIO,
       "libdaemonjvm-tests-" + dir.segments.toVector.drop(dir.segmentCount - 2).mkString("-")

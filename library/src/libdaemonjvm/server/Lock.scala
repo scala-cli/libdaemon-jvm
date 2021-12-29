@@ -89,7 +89,7 @@ object Lock {
 
     def pidSocketFilesFound(): Boolean =
       Files.exists(files.pidFile) &&
-      (SocketHandler.usesWindowsPipe || Files.exists(files.socketPaths.path))
+      (SocketHandler.usesWindowsPipe(files.socketPaths) || Files.exists(files.socketPaths.path))
 
     if (pidSocketFilesFound())
       ifFiles(hasLock = false)

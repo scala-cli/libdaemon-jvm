@@ -7,6 +7,7 @@ import libdaemonjvm.server._
 
 import java.nio.file.Files
 import libdaemonjvm.client.Connect
+import scala.util.Properties
 
 class LockTests extends munit.FunSuite {
 
@@ -37,7 +38,7 @@ class LockTests extends munit.FunSuite {
     }
   }
 
-  if (!SocketHandler.usesWindowsPipe)
+  if (!SocketHandler.supportsWindowsPipe)
     test("ignore invalid socket file") {
       TestUtil.withTestDir { dir =>
         val files      = TestUtil.lockFiles(dir)
@@ -52,7 +53,7 @@ class LockTests extends munit.FunSuite {
       }
     }
 
-  if (!SocketHandler.usesWindowsPipe)
+  if (!SocketHandler.supportsWindowsPipe)
     test("ignore PID file and invalid socket file") {
       TestUtil.withTestDir { dir =>
         val files = TestUtil.lockFiles(dir)
@@ -158,5 +159,41 @@ class LockTests extends munit.FunSuite {
       expect(e.isRight)
     }
   }
+
+  if (Properties.isWin)
+    test("windows pipe") {
+      assert(SocketHandler.supportsWindowsPipe)
+      TestUtil.withTestDir { dir =>
+        val files = TestUtil.lockFiles(dir)
+        val files0 = files.copy(
+          socketPaths = files.socketPaths.copy(
+            preferWindowsPipes = true
+          )
+        )
+        TestUtil.tryAcquire(files0) { maybeServerChannel =>
+          // should be a JNI-based ServerSocket
+          expect(maybeServerChannel.exists(_.isLeft))
+        }
+      }
+    }
+
+  def isJava16Tests = java.lang.Boolean.getBoolean("LIBDAEMON_JAVA_16_TESTS")
+
+  if (isJava16Tests && Properties.isWin)
+    test("windows domain socket") {
+      assert(SocketHandler.supportsWindowsPipe)
+      TestUtil.withTestDir { dir =>
+        val files = TestUtil.lockFiles(dir)
+        val files0 = files.copy(
+          socketPaths = files.socketPaths.copy(
+            preferWindowsPipes = false
+          )
+        )
+        TestUtil.tryAcquire(files0) { maybeServerChannel =>
+          // should be a Java 16-based ServerSocketChannel
+          expect(maybeServerChannel.exists(_.isRight))
+        }
+      }
+    }
 
 }

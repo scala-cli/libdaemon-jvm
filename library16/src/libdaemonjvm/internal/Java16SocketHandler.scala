@@ -14,7 +14,7 @@ import java.nio.file.Paths
 import libdaemonjvm.SocketPaths
 
 object Java16SocketHandler extends SocketHandler {
-  def usesWindowsPipe: Boolean = false
+  def supportsWindowsPipe: Boolean = false
 
   def client(paths: SocketPaths): Either[Socket, SocketChannel] = {
     val a                = UnixDomainSocketAddress.of(paths.path)

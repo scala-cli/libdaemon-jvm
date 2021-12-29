@@ -89,7 +89,8 @@ object LockFiles {
       pidFile = dir.resolve("pid"),
       socketPaths = SocketPaths(
         dir.resolve("socket"),
-        if (addPipePrefix) "\\\\.\\pipe\\" + windowsPipeName else windowsPipeName
+        if (addPipePrefix) "\\\\.\\pipe\\" + windowsPipeName else windowsPipeName,
+        preferWindowsPipes = false
       )
     )
   }
