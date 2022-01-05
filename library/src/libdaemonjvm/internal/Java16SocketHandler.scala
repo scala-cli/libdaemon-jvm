@@ -7,8 +7,6 @@ import java.nio.file.Path
 
 import scala.util.control.NonFatal
 import java.nio.channels.ServerSocketChannel
-import java.net.ServerSocket
-import java.net.Socket
 import java.nio.file.Paths
 
 import libdaemonjvm.SocketPaths
@@ -16,14 +14,14 @@ import libdaemonjvm.SocketPaths
 object Java16SocketHandler extends SocketHandler {
   def usesWindowsPipe: Boolean = false
 
-  def client(paths: SocketPaths): Either[Socket, SocketChannel] = {
+  def client(paths: SocketPaths): SocketChannel = {
     val a                = UnixDomainSocketAddress.of(paths.path)
     var s: SocketChannel = null
     try {
       s = SocketChannel.open(StandardProtocolFamily.UNIX)
       s.connect(a)
       s.finishConnect()
-      Right(s)
+      s
     }
     catch {
       case NonFatal(ex) =>
@@ -37,10 +35,10 @@ object Java16SocketHandler extends SocketHandler {
     }
   }
 
-  def server(paths: SocketPaths): Either[ServerSocket, ServerSocketChannel] = {
+  def server(paths: SocketPaths): ServerSocketChannel = {
     val a = UnixDomainSocketAddress.of(paths.path)
     val s = ServerSocketChannel.open(StandardProtocolFamily.UNIX)
     s.bind(a)
-    Right(s)
+    s
   }
 }

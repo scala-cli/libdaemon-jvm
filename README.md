@@ -58,10 +58,7 @@ import java.nio.file._
 
 val daemonDirectory: Path = ??? // pass a directory under the user home dir, computed with directories-jvm for example
 val lockFiles = LockFiles.under(daemonDirectory, "my-app-name\\daemon") // second argument is the Windows named pipe path (that doesn't live in the file system)
-val res = Lock.tryAcquire(lockFiles) { serverSocket: Either[ServerSocket, ServerSocketChannel] =>
-  // serverSocket is a Right(…) when Java >= 16 Unix domain socket support is used,
-  // it's Left(…) when ipcsocket JNI support is used
-
+val res = Lock.tryAcquire(lockFiles) { serverSocket: ServerSocketChannel =>
   // you should start listening on serverSocket here, and as much as possible,
   // only exit this block when you are actually accepting incoming connections
 }

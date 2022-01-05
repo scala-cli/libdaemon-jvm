@@ -49,7 +49,7 @@ object TestServer {
       )
     }
     val files = LockFiles.under(path)
-    Lock.tryAcquire(files)(s => runServer(() => s.fold(_.accept(), _.accept()))) match {
+    Lock.tryAcquire(files)(s => runServer(() => s.accept())) match {
       case Left(e)   => throw e
       case Right(()) =>
     }
