@@ -6,14 +6,13 @@ import java.nio.file.{Files, Path}
 
 import libdaemonjvm.LockFiles
 import libdaemonjvm.internal.{LockProcess, SocketFile, SocketHandler}
-import java.net.ServerSocket
 
 object Lock {
 
   def tryAcquire[T](
     files: LockFiles
   )(
-    startListening: Either[ServerSocket, ServerSocketChannel] => T
+    startListening: ServerSocketChannel => T
   ): Either[LockError, T] =
     tryAcquire(files, LockProcess.default) {
       val socket = SocketHandler.server(files.socketPaths)

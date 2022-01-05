@@ -7,7 +7,6 @@ import java.nio.channels.ServerSocketChannel
 import libdaemonjvm._
 import libdaemonjvm.internal._
 import libdaemonjvm.server._
-import java.net.ServerSocket
 import scala.util.Properties
 import java.util.concurrent.CountDownLatch
 import java.net.Socket
@@ -49,89 +48,36 @@ object TestUtil {
   }
   def tryAcquire[T](dir: os.Path)(f: (
     LockFiles,
-    Either[LockError, Either[ServerSocket, ServerSocketChannel]]
+    Either[LockError, ServerSocketChannel]
   ) => T): T = {
     val files = lockFiles(dir)
     tryAcquire(files) { maybeChannel =>
       f(files, maybeChannel)
     }
   }
-  def tryAcquire[T](files: LockFiles)(f: Either[
-    LockError,
-    Either[ServerSocket, ServerSocketChannel]
-  ] => T): T =
+  def tryAcquire[T](files: LockFiles)(f: Either[LockError, ServerSocketChannel] => T): T =
     tryAcquire(files, LockProcess.default)(f)
   def tryAcquire[T](
     files: LockFiles,
     proc: LockProcess
-  )(f: Either[LockError, Either[ServerSocket, ServerSocketChannel]] => T): T = {
-    var serverChannel: Either[ServerSocket, ServerSocketChannel] = null
-    var acceptThreadOpt                                          = Option.empty[Thread]
-    val accepting                                                = new CountDownLatch(1)
-    val shouldStop                                               = new AtomicBoolean(false)
+  )(f: Either[LockError, ServerSocketChannel] => T): T = {
+    var serverChannel: ServerSocketChannel = null
+    val accepting                          = new CountDownLatch(1)
     try {
       val maybeServerChannel = Lock.tryAcquire(files, proc) {
         serverChannel = SocketHandler.server(files.socketPaths)
-        if (Properties.isWin)
-          // Windows named pipes seem no to accept clients unless accept is being called on the server socket
-          acceptThreadOpt =
-            serverChannel.left.toOption.map(acceptAndDiscard(
-              _,
-              accepting,
-              () => shouldStop.get()
-            ))
-        for (t <- acceptThreadOpt) {
-          t.start()
-          accepting.await()
-          // waiting so that the accept call below effectively awaits client... :|
-          Thread.sleep(
-            1000L
-          )
-        }
         serverChannel
       }
       f(maybeServerChannel)
     }
     finally {
-      shouldStop.set(true)
       try SocketFile.canConnect(files.socketPaths) // unblock the server thread last accept
       catch {
         case NonFatal(e) =>
           System.err.println(s"Ignoring $e while trying to unblock last accept")
       }
       for (channel <- Option(serverChannel))
-        channel.merge.close()
+        channel.close()
     }
   }
-
-  val acceptAndDiscardCount = new AtomicInteger
-  def acceptAndDiscard(
-    s: ServerSocket,
-    accepting: CountDownLatch,
-    shouldStop: () => Boolean
-  ): Thread =
-    new Thread(
-      s"libdaemonjvm-tests-accept-and-discard-${acceptAndDiscardCount.incrementAndGet()}"
-    ) {
-      setDaemon(true)
-      val closeCount = new AtomicInteger
-      def closeSocket(socket: Socket): Unit = {
-        val t = new Thread(s"$getName-close-${closeCount.incrementAndGet()}") {
-          setDaemon(true)
-          override def run(): Unit = {
-            socket.close()
-          }
-        }
-        t.start()
-      }
-      override def run(): Unit = {
-        accepting.countDown()
-        while (!shouldStop()) {
-          val client = s.accept()
-          // closing the client socket in the background, as this call seems to block a few seconds
-          closeSocket(client)
-        }
-      }
-    }
-
 }

@@ -1,6 +1,5 @@
 package libdaemonjvm.client
 
-import java.net.Socket
 import java.nio.channels.SocketChannel
 import java.nio.charset.StandardCharsets
 import java.nio.file.Files
@@ -10,23 +9,19 @@ import libdaemonjvm.LockFiles
 
 object Connect {
 
-  def tryConnect(files: LockFiles): Option[Either[ConnectError, Either[Socket, SocketChannel]]] =
+  def tryConnect(files: LockFiles): Option[Either[ConnectError, SocketChannel]] =
     tryConnect(files, LockProcess.default)
 
   def tryConnect(
     files: LockFiles,
     proc: LockProcess
-  ): Option[Either[ConnectError, Either[Socket, SocketChannel]]] = {
+  ): Option[Either[ConnectError, SocketChannel]] = {
 
-    def ifProcessRunning(pid: Int): Either[ConnectError, Either[Socket, SocketChannel]] =
-      SocketFile.connect(files.socketPaths) match {
-        case Left(e) =>
-          Left(new ConnectError.ZombieFound(pid, e))
-        case Right(s) =>
-          Right(s)
-      }
+    def ifProcessRunning(pid: Int): Either[ConnectError, SocketChannel] =
+      SocketFile.connect(files.socketPaths)
+        .left.map(e => new ConnectError.ZombieFound(pid, e))
 
-    def ifFiles(hasLock: Boolean): Option[Either[ConnectError, Either[Socket, SocketChannel]]] = {
+    def ifFiles(hasLock: Boolean): Option[Either[ConnectError, SocketChannel]] = {
       val b = Files.readAllBytes(files.pidFile)
 
       // FIXME Catch malformed content errors here?
