@@ -39,7 +39,7 @@ final case class LockFiles(
     }
     finally {
       if (l != null)
-        try l.foreach(_.release())
+        try l.toOption.filter(_ != null).foreach(_.release())
         catch {
           case _: ClosedChannelException =>
           case _: IOException            =>
