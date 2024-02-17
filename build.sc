@@ -26,9 +26,6 @@ def tmpDirBase =
 
 class Library(val crossScalaVersion: String) extends CrossScalaModule with LibDaemonPublish {
   def artifactName = "libdaemon"
-  def compileIvyDeps = super.compileIvyDeps() ++ Seq(
-    ivy"org.graalvm.nativeimage:svm:21.2.0"
-  )
   def javacOptions = super.javacOptions() ++ Seq(
     "--release",
     "16"

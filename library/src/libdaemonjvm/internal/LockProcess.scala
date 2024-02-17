@@ -8,13 +8,9 @@ trait LockProcess {
 object LockProcess {
   class Default extends LockProcess {
     def pid(): Int =
-      Option((new Pid).get()).map(n => (n: Int)).getOrElse {
-        sys.error("Cannot get PID")
-      }
+      ProcessHandle.current().pid().toInt
     def isRunning(pid: Int): Boolean =
-      Option((new IsRunning).isRunning(pid)).map(b => (b: Boolean)).getOrElse {
-        Processes.isRunning(pid)
-      }
+      ProcessHandle.of(pid).map(p => p.isAlive).orElse(false)
   }
 
   def default: LockProcess =
