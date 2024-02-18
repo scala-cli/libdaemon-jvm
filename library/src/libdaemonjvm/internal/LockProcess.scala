@@ -9,8 +9,11 @@ object LockProcess {
   class Default extends LockProcess {
     def pid(): Int =
       ProcessHandle.current().pid().toInt
-    def isRunning(pid: Int): Boolean =
-      ProcessHandle.of(pid).map(p => p.isAlive).orElse(false)
+    def isRunning(pid: Int): Boolean = {
+      val maybeHandle = ProcessHandle.of(pid)
+      if (maybeHandle.isEmpty) false
+      else maybeHandle.get.isAlive  
+    }
   }
 
   def default: LockProcess =
