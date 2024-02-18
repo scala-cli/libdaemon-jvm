@@ -12,7 +12,7 @@ object LockProcess {
     def isRunning(pid: Int): Boolean = {
       val maybeHandle = ProcessHandle.of(pid)
       if (maybeHandle.isEmpty) false
-      else maybeHandle.get.isAlive  
+      else maybeHandle.get.isAlive
     }
   }
 
